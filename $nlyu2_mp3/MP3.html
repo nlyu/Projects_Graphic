@@ -1,0 +1,113 @@
+<!DOCTYPE HTML> 
+<html lang="en"> 
+<head>
+<title>MP3</title>
+<meta charset="utf-8"> 
+</head>
+
+    
+<script id="shader-vs" type="x-shader/x-vertex">
+   //geometry
+   attribute vec4 aVertexColor;
+   attribute vec3 aVertexNormal;
+   attribute vec3 aVertexPosition;
+   //matrices
+   uniform mat4 uMVMatrix;
+   uniform mat4 uPMatrix;
+   uniform mat3 uNMatrix;
+   uniform mat4 uRotateMat;
+   uniform vec3 uLightPosition;
+   uniform vec3 uAmbientLightColor;
+   uniform vec3 uDiffuseLightColor;
+   uniform vec3 uSpecularLightColor;
+   
+   //varying
+   varying vec3 vVertexCoord;
+   varying vec3 vVertexNormal;
+   varying vec4 vColor;
+   
+   const float shininess = 32.0;
+   void main(void) {
+	   //Set the vertex position to eye coordinates
+	   vec4 vertexPositionEye4 = uMVMatrix * vec4(aVertexPosition, 1.0);
+	   vec3 vertexPositionEye3 = vertexPositionEye4.xyz/vertexPositionEye4.w;       
+       // Calculate viewVector (v) which is in the nective z axis
+	   vec3 v = -normalize(vertexPositionEye3);
+	   // Calculate the vector l
+	   vec3 l = normalize(uLightPosition - vertexPositionEye3);
+       // Calculate the nomal vector
+	   vec3 n = normalize(uNMatrix * aVertexNormal);
+
+	   // Sum the three reflection components plus the base colors,
+	   vColor = vec4((uAmbientLightColor)
+					 + ((uDiffuseLightColor) * max(dot(n,l), 0.0))
+					 + ((uSpecularLightColor) * pow(max(dot(normalize(reflect(-l, n)), v), 0.0), shininess)), 1.0);
+	   
+       //final vertex position
+	   gl_Position = uPMatrix*uMVMatrix*vec4(aVertexPosition, 1.0);
+       //send to fragment
+	   vVertexCoord = aVertexPosition;
+       //Normal vertex shader
+	   vec4 temp = uRotateMat * vec4(aVertexNormal, 1.0);
+	   vVertexNormal = vec3(temp[0], temp[1], temp[2]);
+    }
+</script>
+  
+<script id="shader-fs" type="x-shader/x-fragment">
+	precision mediump float;
+
+	// Passed in from the vertex shader
+	varying vec3 vVertexCoord;
+	varying vec3 vVertexNormal;
+	varying vec4 vColor;
+
+	// The texture
+	uniform samplerCube uSampler;
+	uniform vec3 viewDir;
+
+	// Dictates how to set gl_FragColor
+	uniform float uIsSkybox;
+
+	void main() {
+		// texture map the skybox
+		if (uIsSkybox > 0.5)
+			gl_FragColor = textureCube(uSampler, normalize(vVertexCoord));
+		// environment map the teapot
+		else{
+			vec3 reflect = 2.0*(dot(vVertexNormal, viewDir))*vVertexNormal - viewDir;
+			gl_FragColor = textureCube(uSampler, normalize(-reflect)) + vColor;
+		}
+	}
+</script>
+    
+<!--load files-->
+<script src="gl-matrix-min.js"></script>  
+<script src="webgl-utils.js"></script>
+<script src="MP3_main.js"></script> 
+<script src="MP3_commands.js"></script>
+<script src="MP3_teapot.js"></script>
+<script src="MP3_skybox.js"></script>
+<script src="MP3_loadobj.js"></script>
+<script src="MP3_view.js"></script>
+    
+<body onload="startup();">
+    <div align="center" style="background-color: white;">
+        <table align="center" style="font-family: Cursive;">
+                <thead>
+                    <th><h2>How to play</h2></th>
+                </thead>
+                <tbody style="font-size: 16px;">
+                    <tr><td style="font-size: 12px;">&nbsp&nbsp&nbsp&nbsp&nbsp Nuochen Lyu  MP3</td></tr>
+                    <tr><td>&#8593&nbsp&nbsp&nbsp&nbsp&nbspup rotation</td></tr>
+                    <tr><td>&#8595&nbsp&nbsp&nbsp&nbsp&nbspdown rotation</td></tr>
+                    <tr><td>&#8594&nbsp&nbsp&nbsp&nbsp&nbspright rotation</td></tr>
+                    <tr><td>&#8592&nbsp&nbsp&nbsp&nbsp&nbspleft rotation</td></tr>
+                    <tr><td>&nbsp&nbsp&nbsp</td></tr>
+                </tbody>
+        </table>
+    </div>
+    <div align="center">
+    <canvas id="myGLCanvas" width=600 height=400></canvas>
+    </div>
+</body>
+</html>
